@@ -38,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <h1 className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight leading-tight">
-              Moew PDF
+              Moew Tools
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
               All-in-One Utility Suite

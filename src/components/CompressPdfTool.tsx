@@ -111,8 +111,8 @@ export const CompressPdfTool: React.FC<CompressPdfToolProps> = ({ onBack, onToas
 
       // If document has metadata / unnecessary overhead, optimize
       pdfDoc.setTitle(file.name.replace(/\.pdf$/i, ''));
-      pdfDoc.setProducer('Moew PDF Engine');
-      pdfDoc.setCreator('Moew PDF');
+      pdfDoc.setProducer('Moew Tools Engine');
+      pdfDoc.setCreator('Moew Tools');
 
       const initialSave = await pdfDoc.save({
         useObjectStreams: true,

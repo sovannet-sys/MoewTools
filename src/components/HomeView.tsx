@@ -121,7 +121,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
           <span>100% Client-Side Privacy & Instant Processing</span>
         </div>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
-          Supercharge Your Workflow with Moew PDF
+          Supercharge Your Workflow with Moew Tools
         </h2>
         <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
           Lightning-fast developer utilities, cryptographic password generation, and high-capacity browser PDF processing supporting massive files. Free forever.

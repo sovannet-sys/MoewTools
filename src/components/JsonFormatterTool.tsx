@@ -51,7 +51,7 @@ export const JsonFormatterTool: React.FC<JsonFormatterToolProps> = ({
 
   const handleLoadSample = () => {
     const sample = {
-      name: 'Moew PDF Suite',
+      name: 'Moew Tools Suite',
       version: '3.2.0',
       active: true,
       features: [

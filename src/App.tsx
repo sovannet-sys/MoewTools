@@ -84,7 +84,7 @@ export default function App() {
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-6 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
         <p>
-          &copy; {new Date().getFullYear()} Moew PDF. All processing executes 100% securely inside your browser.
+          &copy; {new Date().getFullYear()} Moew Tools. All processing executes 100% securely inside your browser.
         </p>
       </footer>
 
