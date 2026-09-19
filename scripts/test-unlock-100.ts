@@ -131,6 +131,16 @@ async function run100UnlockTests() {
         failed++;
         continue;
       }
+      if (reloadedDoc.getPage(0).getWidth() !== 595 || reloadedDoc.getPage(0).getHeight() !== 842) {
+        console.error(`❌ Test #${i} failed: Dimension mismatch - quality not preserved`);
+        failed++;
+        continue;
+      }
+      if (unlockResult.strategyUsed !== 'direct-decrypt') {
+        console.error(`❌ Test #${i} failed: Did not use lossless direct decryption strategy`);
+        failed++;
+        continue;
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`❌ Test #${i} failed: Could not parse unlocked PDF: ${msg}`);

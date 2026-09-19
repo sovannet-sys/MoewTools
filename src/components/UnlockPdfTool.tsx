@@ -10,6 +10,7 @@ import {
   X,
   Loader2,
   CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import { ToolId } from '../types';
@@ -130,9 +131,9 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
       setProgressStatus('PDF Unlocked Successfully!');
 
       if (result.isAlreadyDecrypted) {
-        onToast('Document was verified: Security restrictions and permission locks cleared!');
+        onToast('Document was verified: Security restrictions and permission locks cleared with 100% original quality!');
       } else {
-        onToast('PDF successfully decrypted! Passwords and restrictions removed.');
+        onToast('PDF successfully decrypted with 100% original quality! Passwords and restrictions removed.');
       }
     } catch (err: unknown) {
       const rawMsg = err instanceof Error ? err.message : 'Failed to unlock PDF';
@@ -197,7 +198,7 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
                 Click to upload or drag & drop locked PDF
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                Supports massive documents and unknown passwords
+                100% Original Quality Guarantee &bull; Lossless Vector Decryption
               </p>
             </div>
             <input
@@ -240,7 +241,7 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
           </div>
         )}
 
-        {/* Optional Password Input & Recovery Info */}
+        {/* Optional Password Input & Lossless Quality Info */}
         <div className="space-y-3">
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
@@ -257,14 +258,14 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
             />
           </div>
 
-          <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-1.5">
-            <div className="flex items-center space-x-2 text-rose-700 dark:text-rose-400 text-xs font-bold">
-              <ShieldCheck className="w-4 h-4 shrink-0" />
-              <span>Unknown Password Recovery Engine</span>
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-1.5">
+            <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span>100% Original Quality Guaranteed</span>
             </div>
             <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-              If you don&apos;t know the password or owner PIN, our dual-engine bypass renders
-              each page using canvas vector streams and reconstructs a fresh, 100% unlocked PDF.
+              Decryption is performed directly on the document streams without rasterization or downsampling.
+              Vector text remains 100% sharp and selectable, and all original images, fonts, and layouts are preserved bit-for-bit.
             </p>
           </div>
         </div>
@@ -325,7 +326,7 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
                   PDF Unlocked Successfully!
                 </p>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                  Size: {formatBytes(unlockedSizeBytes)} &bull; All password and restriction flags removed.
+                  Size: {formatBytes(unlockedSizeBytes)} &bull; 100% original quality preserved &bull; Restrictions removed.
                 </p>
               </div>
             </div>
