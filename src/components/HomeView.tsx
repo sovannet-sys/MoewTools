@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import {
   Braces,
   FileArchive,
+  FileImage,
+  Files,
   KeyRound,
   Search,
   Unlock,
@@ -17,12 +19,28 @@ interface HomeViewProps {
 
 const ALL_TOOLS: ToolDefinition[] = [
   {
+    id: 'pdftopng',
+    name: 'PDF to PNG Converter',
+    shortDesc: 'Convert PDF pages into crisp, high-resolution PNG images with customizable DPI scale and ZIP batch download.',
+    category: 'pdf',
+    categoryLabel: 'PDF Utility',
+    tags: ['pdf', 'png', 'image', 'convert', 'extract', 'render', 'high res', 'dpi', 'zip'],
+  },
+  {
     id: 'unlockpdf',
     name: 'Unlock PDF',
-    shortDesc: 'Remove passwords and restrictions automatically even when you do not know the password.',
+    shortDesc: 'Remove passwords and restrictions automatically with 100% original vector and text quality.',
     category: 'pdf',
     categoryLabel: 'PDF Utility',
     tags: ['unlock', 'pdf', 'password', 'decrypt', 'remove', 'unknown', 'bypass', 'security'],
+  },
+  {
+    id: 'mergepdf',
+    name: 'Merge PDF Files',
+    shortDesc: 'Combine multiple PDF documents into a single file in any custom order with 100% original quality.',
+    category: 'pdf',
+    categoryLabel: 'PDF Utility',
+    tags: ['merge', 'pdf', 'combine', 'join', 'reorder', 'pages', 'documents', 'unite'],
   },
   {
     id: 'compresspdf',
@@ -71,14 +89,18 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
 
   const getToolIcon = (id: ToolId) => {
     switch (id) {
+      case 'pdftopng':
+        return <FileImage className="w-4 h-4 text-teal-600 dark:text-teal-400" />;
       case 'unlockpdf':
-        return <Unlock className="w-6 h-6 text-rose-600 dark:text-rose-400" />;
+        return <Unlock className="w-4 h-4 text-rose-600 dark:text-rose-400" />;
+      case 'mergepdf':
+        return <Files className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
       case 'compresspdf':
-        return <FileArchive className="w-6 h-6 text-orange-600 dark:text-orange-400" />;
+        return <FileArchive className="w-4 h-4 text-orange-600 dark:text-orange-400" />;
       case 'json':
-        return <Braces className="w-6 h-6 text-amber-600 dark:text-amber-400" />;
+        return <Braces className="w-4 h-4 text-amber-600 dark:text-amber-400" />;
       case 'password':
-        return <KeyRound className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />;
+        return <KeyRound className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />;
       default:
         return null;
     }
@@ -99,8 +121,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
 
   const getIconBgClass = (id: ToolId) => {
     switch (id) {
+      case 'pdftopng':
+        return 'bg-teal-500/10 dark:bg-teal-500/15 group-hover:bg-teal-500/20';
       case 'unlockpdf':
         return 'bg-rose-500/10 dark:bg-rose-500/15 group-hover:bg-rose-500/20';
+      case 'mergepdf':
+        return 'bg-blue-500/10 dark:bg-blue-500/15 group-hover:bg-blue-500/20';
       case 'compresspdf':
         return 'bg-orange-500/10 dark:bg-orange-500/15 group-hover:bg-orange-500/20';
       case 'json':
@@ -192,7 +218,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
       {/* Tool Grid */}
       <div
         id="tools-grid"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5 max-w-4xl mx-auto"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 max-w-4xl mx-auto"
       >
         {filteredTools.map((tool) => (
           <div
@@ -206,18 +232,18 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
                 onSelectTool(tool.id);
               }
             }}
-            className="group bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-xs hover:shadow-xl hover:border-indigo-500/70 dark:hover:border-indigo-500/70 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-4 text-left"
+            className="group bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-xs hover:shadow-lg hover:border-indigo-500/70 dark:hover:border-indigo-500/70 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3.5 text-left"
           >
-            <div className="flex items-start justify-between">
+            <div className="flex items-center justify-between">
               <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${getIconBgClass(
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shrink-0 ${getIconBgClass(
                   tool.id
                 )}`}
               >
                 {getToolIcon(tool.id)}
               </div>
               <span
-                className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${getBadgeClass(
+                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${getBadgeClass(
                   tool.category
                 )}`}
               >
@@ -226,9 +252,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
             </div>
 
             <div className="space-y-1">
-              <h3 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors flex items-center justify-between">
                 <span>{tool.name}</span>
-                <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-indigo-600 dark:text-indigo-400" />
+                <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-indigo-600 dark:text-indigo-400" />
               </h3>
               <p className="text-xs font-medium text-slate-600 dark:text-slate-300 line-clamp-2">
                 {tool.shortDesc}

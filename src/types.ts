@@ -1,4 +1,4 @@
-export type ToolId = 'home' | 'unlockpdf' | 'compresspdf' | 'json' | 'password';
+export type ToolId = 'home' | 'unlockpdf' | 'compresspdf' | 'mergepdf' | 'pdftopng' | 'json' | 'password';
 
 export type ToolCategory = 'all' | 'dev' | 'security' | 'pdf';
 

@@ -180,14 +180,14 @@ export async function unlockPdf(
     };
   }
 
-  // If both lossless direct decryption engines did not decrypt, and custom password was not supplied or was incorrect:
+  // If both lossless direct decryption engines did not decrypt:
   if (!userPwd) {
     throw new Error(
-      'This document is protected with a user password. Please enter the password in the "PDF Password" box above to unlock it with 100% original quality.'
+      'This document is encrypted with a password and could not be unlocked.'
     );
   } else {
     throw new Error(
-      'The password entered does not match this PDF. Please check the password and try again.'
+      'The provided password does not match this PDF.'
     );
   }
 }

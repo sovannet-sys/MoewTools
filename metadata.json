@@ -1,6 +1,6 @@
 {
   "name": "Moew Tools",
-  "description": "All-in-one developer and PDF utility suite featuring PDF unlocking, compression, JSON formatting, and secure password generation.",
+  "description": "All-in-one developer and PDF utility suite featuring PDF to PNG conversion, merging, unlocking, compression, JSON formatting, and secure password generation.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

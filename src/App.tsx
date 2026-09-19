@@ -6,6 +6,8 @@ import { JsonFormatterTool } from './components/JsonFormatterTool';
 import { PasswordGeneratorTool } from './components/PasswordGeneratorTool';
 import { UnlockPdfTool } from './components/UnlockPdfTool';
 import { CompressPdfTool } from './components/CompressPdfTool';
+import { MergePdfTool } from './components/MergePdfTool';
+import { PdfToPngTool } from './components/PdfToPngTool';
 import { ToastMessage, ToolId } from './types';
 
 export default function App() {
@@ -66,6 +68,14 @@ export default function App() {
 
         {currentTool === 'unlockpdf' && (
           <UnlockPdfTool onBack={handleNavigate} onToast={showToast} />
+        )}
+
+        {currentTool === 'mergepdf' && (
+          <MergePdfTool onBack={handleNavigate} onToast={showToast} />
+        )}
+
+        {currentTool === 'pdftopng' && (
+          <PdfToPngTool onBack={handleNavigate} onToast={showToast} />
         )}
 
         {currentTool === 'compresspdf' && (

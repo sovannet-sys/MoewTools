@@ -3,8 +3,6 @@ import {
   ArrowLeft,
   Download,
   FileText,
-  Key,
-  ShieldCheck,
   Unlock,
   UploadCloud,
   X,
@@ -54,7 +52,6 @@ declare global {
 
 export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast }) => {
   const [file, setFile] = useState<File | null>(null);
-  const [customPassword, setCustomPassword] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressStatus, setProgressStatus] = useState<string>('');
   const [progressPercent, setProgressPercent] = useState<number>(0);
@@ -84,7 +81,6 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
 
   const handleReset = () => {
     setFile(null);
-    setCustomPassword('');
     setIsProcessing(false);
     setProgressStatus('');
     setProgressPercent(0);
@@ -108,7 +104,6 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
       const arrayBuffer = await file.arrayBuffer();
 
       const result = await unlockPdf(arrayBuffer, {
-        customPassword,
         onProgress: (percent, status) => {
           setProgressPercent(percent);
           setProgressStatus(status);
@@ -143,9 +138,9 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
         rawMsg.includes('PasswordException') ||
         rawMsg.includes('Incorrect password')
       ) {
-        friendlyMsg = 'This PDF is password-protected. Please enter the password in the box above to unlock it.';
+        friendlyMsg = 'This PDF is protected with a user password and could not be unlocked.';
       } else if (rawMsg.includes('Unsupported encryption') || rawMsg.includes('V=4, R=4')) {
-        friendlyMsg = 'Document is protected with custom security. Please enter the password above to unlock it.';
+        friendlyMsg = 'Document is protected with custom security and could not be unlocked.';
       }
       onToast(friendlyMsg, true);
       setProgressStatus('');
@@ -241,33 +236,16 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
           </div>
         )}
 
-        {/* Optional Password Input & Lossless Quality Info */}
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
-              <Key className="w-3.5 h-3.5 text-rose-500" />
-              <span>PDF Password (Optional)</span>
-            </label>
-            <input
-              type="text"
-              value={customPassword}
-              onChange={(e) => setCustomPassword(e.target.value)}
-              placeholder="Leave blank if password is unknown..."
-              disabled={isProcessing}
-              className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500"
-            />
+        {/* 100% Original Quality Info */}
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-1.5">
+          <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span>100% Original Quality Guaranteed</span>
           </div>
-
-          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-1.5">
-            <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
-              <Sparkles className="w-4 h-4 shrink-0" />
-              <span>100% Original Quality Guaranteed</span>
-            </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-              Decryption is performed directly on the document streams without rasterization or downsampling.
-              Vector text remains 100% sharp and selectable, and all original images, fonts, and layouts are preserved bit-for-bit.
-            </p>
-          </div>
+          <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+            Decryption is performed directly on the document streams without rasterization or downsampling.
+            Vector text remains 100% sharp and selectable, and all original images, fonts, and layouts are preserved bit-for-bit.
+          </p>
         </div>
 
         {/* Progress Bar */}
