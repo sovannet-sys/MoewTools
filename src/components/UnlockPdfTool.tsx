@@ -14,6 +14,7 @@ import {
 import { PDFDocument } from 'pdf-lib';
 import { ToolId } from '../types';
 import { formatBytes } from '../utils/formatters';
+import { unlockPdf } from '../utils/pdfUnlocker';
 
 interface UnlockPdfToolProps {
   onBack: (id: ToolId) => void;
@@ -100,132 +101,52 @@ export const UnlockPdfTool: React.FC<UnlockPdfToolProps> = ({ onBack, onToast })
 
     setIsProcessing(true);
     setProgressPercent(5);
-    setProgressStatus('Reading PDF data buffer...');
+    setProgressStatus('Reading PDF file bytes...');
 
     try {
       const arrayBuffer = await file.arrayBuffer();
 
-      // Strategy 1: Attempt direct decryption via PDFLib
-      let unencryptedDoc: PDFDocument | null = null;
-      let directlyLoaded = false;
+      const result = await unlockPdf(arrayBuffer, {
+        customPassword,
+        onProgress: (percent, status) => {
+          setProgressPercent(percent);
+          setProgressStatus(status);
+        },
+      });
 
-      const candidatePasswords = [
-        customPassword.trim(),
-        '',
-        'user',
-        'owner',
-        '12345',
-        'password',
-        'admin',
-        '123456',
-        'pdf',
-        'open',
-        '1234',
-      ].filter((p, idx, arr) => arr.indexOf(p) === idx);
+      // Extract exact ArrayBuffer slice for 100% valid Blob byte boundaries
+      const exactBuffer = result.unlockedBytes.buffer.slice(
+        result.unlockedBytes.byteOffset,
+        result.unlockedBytes.byteOffset + result.unlockedBytes.byteLength
+      );
+      const blob = new Blob([exactBuffer as ArrayBuffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
 
-      setProgressStatus('Checking security restrictions & encryption flags...');
-      setProgressPercent(15);
-
-      try {
-        const loaded = await PDFDocument.load(arrayBuffer, {
-          ignoreEncryption: true,
-        });
-        unencryptedDoc = loaded;
-        directlyLoaded = true;
-      } catch {
-        // Proceed to deep reconstruction
-      }
-
-      let finalPdfBytes: Uint8Array;
-
-      if (directlyLoaded && unencryptedDoc) {
-        setProgressStatus('Directly stripping document encryption and restriction flags...');
-        setProgressPercent(80);
-        // Save without password
-        finalPdfBytes = await unencryptedDoc.save();
-      } else {
-        // Strategy 2: High-Clarity Canvas Re-construction using pdfjsLib
-        // This handles cases where user doesn't know the password or proprietary DRM locks
-        setProgressStatus('Bypassing security handler via deep reconstruction engine...');
-        setProgressPercent(25);
-
-        const pdfjs = window.pdfjsLib;
-        if (!pdfjs) {
-          throw new Error('PDF.js engine is initializing. Please try again in 2 seconds.');
-        }
-
-        let pdfJsDoc = null;
-        for (const pwd of candidatePasswords) {
-          try {
-            const task = pdfjs.getDocument({ data: arrayBuffer, password: pwd });
-            pdfJsDoc = await task.promise;
-            break;
-          } catch {
-            // Try next password
-          }
-        }
-
-        if (!pdfJsDoc) {
-          try {
-            const task = pdfjs.getDocument({ data: arrayBuffer });
-            pdfJsDoc = await task.promise;
-          } catch {
-            throw new Error(
-              'Document is locked with high-grade proprietary encryption. If you know the password, please enter it in the password field above.'
-            );
-          }
-        }
-
-        const totalPages = pdfJsDoc.numPages;
-        const newPdfDoc = await PDFDocument.create();
-
-        for (let i = 1; i <= totalPages; i++) {
-          const currentPct = Math.min(25 + Math.round((i / totalPages) * 65), 90);
-          setProgressPercent(currentPct);
-          setProgressStatus(`Reconstructing page ${i} of ${totalPages} without locks...`);
-
-          const page = await pdfJsDoc.getPage(i);
-          const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for sharp text & vectors
-
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-          if (!context) throw new Error('Could not initialize canvas context');
-
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-
-          await page.render({ canvasContext: context, viewport }).promise;
-
-          const imgData = canvas.toDataURL('image/jpeg', 0.95);
-          const embeddedImage = await newPdfDoc.embedJpg(imgData);
-
-          const newPage = newPdfDoc.addPage([viewport.width / 2, viewport.height / 2]);
-          newPage.drawImage(embeddedImage, {
-            x: 0,
-            y: 0,
-            width: newPage.getWidth(),
-            height: newPage.getHeight(),
-          });
-        }
-
-        setProgressStatus('Packaging clean, unencrypted PDF document...');
-        setProgressPercent(95);
-        finalPdfBytes = await newPdfDoc.save();
-      }
+      setDownloadUrl(url);
+      setDownloadFileName(`unlocked_${file.name}`);
+      setUnlockedSizeBytes(result.unlockedSize);
 
       setProgressPercent(100);
       setProgressStatus('PDF Unlocked Successfully!');
 
-      const blob = new Blob([finalPdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      setDownloadUrl(url);
-      setDownloadFileName(`unlocked_${file.name}`);
-      setUnlockedSizeBytes(blob.size);
-
-      onToast('PDF password and restrictions successfully removed!');
+      if (result.isAlreadyDecrypted) {
+        onToast('Document was verified: Security restrictions and permission locks cleared!');
+      } else {
+        onToast('PDF successfully decrypted! Passwords and restrictions removed.');
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to unlock PDF';
-      onToast(msg, true);
+      const rawMsg = err instanceof Error ? err.message : 'Failed to unlock PDF';
+      let friendlyMsg = rawMsg;
+      if (
+        rawMsg.toLowerCase().includes('password') ||
+        rawMsg.includes('PasswordException') ||
+        rawMsg.includes('Incorrect password')
+      ) {
+        friendlyMsg = 'This PDF is password-protected. Please enter the password in the box above to unlock it.';
+      } else if (rawMsg.includes('Unsupported encryption') || rawMsg.includes('V=4, R=4')) {
+        friendlyMsg = 'Document is protected with custom security. Please enter the password above to unlock it.';
+      }
+      onToast(friendlyMsg, true);
       setProgressStatus('');
       setProgressPercent(0);
     } finally {

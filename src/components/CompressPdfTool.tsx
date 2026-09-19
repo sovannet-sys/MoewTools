@@ -14,6 +14,7 @@ import {
 import { PDFDocument } from 'pdf-lib';
 import { CompressionTier, ToolId } from '../types';
 import { formatBytes } from '../utils/formatters';
+import { compressPdf, TIER_LIMITS } from '../utils/pdfCompressor';
 
 interface CompressPdfToolProps {
   onBack: (id: ToolId) => void;
@@ -76,123 +77,39 @@ export const CompressPdfTool: React.FC<CompressPdfToolProps> = ({ onBack, onToas
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const origSize = file.size;
 
-      // Determine compression parameters based on tier
-      // Low: 30-50% target
-      // Medium: 50-70% target
-      // High: 70-90% target
-      let targetReduction = 0.40; // 40% reduction for low
-      let jpegQuality = 0.85;
-      let renderScale = 1.6;
-
-      if (level === 'medium') {
-        targetReduction = 0.60; // 60% reduction
-        jpegQuality = 0.70;
-        renderScale = 1.3;
-      } else if (level === 'high') {
-        targetReduction = 0.80; // 80% reduction
-        jpegQuality = 0.55;
-        renderScale = 1.0;
-      }
-
-      setProgressPercent(25);
-      setProgressStatus('Decompressing and optimizing vector streams...');
-
-      let finalPdfBytes: Uint8Array;
-
-      // For Low tier, try pure PDF-Lib object stream packing first
-      let pdfDoc: PDFDocument | null = null;
-      try {
-        pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-      } catch {
-        pdfDoc = await PDFDocument.load(arrayBuffer);
-      }
-
-      // If document has metadata / unnecessary overhead, optimize
-      pdfDoc.setTitle(file.name.replace(/\.pdf$/i, ''));
-      pdfDoc.setProducer('Moew Tools Engine');
-      pdfDoc.setCreator('Moew Tools');
-
-      const initialSave = await pdfDoc.save({
-        useObjectStreams: true,
+      const result = await compressPdf(arrayBuffer, level, {
+        onProgress: (percent, status) => {
+          setProgressPercent(percent);
+          setProgressStatus(status);
+        },
       });
 
-      // If initial save already reduced significantly (or if we can achieve target via stream recompression)
-      if (initialSave.length < origSize * (1 - targetReduction * 0.75) && level === 'low') {
-        finalPdfBytes = initialSave;
-        setProgressPercent(90);
-      } else if (window.pdfjsLib && (level === 'medium' || level === 'high' || initialSave.length >= origSize * 0.85)) {
-        // High/Medium optimization: Render through canvas at optimal resolution & re-encode
-        const pdfjs = window.pdfjsLib;
-        const task = pdfjs.getDocument({ data: arrayBuffer });
-        const pdfJsDoc = await task.promise;
-        const totalPages = pdfJsDoc.numPages;
-
-        const optimizedDoc = await PDFDocument.create();
-
-        for (let i = 1; i <= totalPages; i++) {
-          const pct = Math.min(25 + Math.round((i / totalPages) * 65), 90);
-          setProgressPercent(pct);
-          setProgressStatus(`Compressing and downsampling page ${i} of ${totalPages}...`);
-
-          const page = await pdfJsDoc.getPage(i);
-          const viewport = page.getViewport({ scale: renderScale });
-
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-          if (!context) throw new Error('Could not create canvas context');
-
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-
-          await page.render({ canvasContext: context, viewport }).promise;
-
-          const imgData = canvas.toDataURL('image/jpeg', jpegQuality);
-          const embeddedImage = await optimizedDoc.embedJpg(imgData);
-
-          const newPage = optimizedDoc.addPage([viewport.width / renderScale, viewport.height / renderScale]);
-          newPage.drawImage(embeddedImage, {
-            x: 0,
-            y: 0,
-            width: newPage.getWidth(),
-            height: newPage.getHeight(),
-          });
-        }
-
-        setProgressStatus('Finalizing compressed PDF package...');
-        setProgressPercent(92);
-        finalPdfBytes = await optimizedDoc.save({ useObjectStreams: true });
-      } else {
-        finalPdfBytes = initialSave;
-      }
-
-      // Ensure final file size reflects target savings while remaining a valid PDF
-      let finalLength = finalPdfBytes.length;
-      if (finalLength >= origSize) {
-        // Enforce targeted tier optimization
-        const targetBytes = Math.floor(origSize * (1 - targetReduction));
-        if (finalLength > targetBytes && initialSave.length <= origSize) {
-          finalPdfBytes = initialSave;
-        }
-      }
-
-      const blob = new Blob([finalPdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      // Extract exact ArrayBuffer slice to ensure 100% valid Blob byte boundaries
+      const exactBuffer = result.pdfBytes.buffer.slice(
+        result.pdfBytes.byteOffset,
+        result.pdfBytes.byteOffset + result.pdfBytes.byteLength
+      );
+      const blob = new Blob([exactBuffer as ArrayBuffer], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
 
-      setOriginalSize(origSize);
-      setCompressedSize(blob.size);
+      setOriginalSize(result.originalSize);
+      setCompressedSize(result.compressedSize);
       setDownloadUrl(url);
       setDownloadFileName(`compressed_${file.name}`);
 
       setProgressPercent(100);
       setProgressStatus('Compression complete!');
 
-      const pctSaved = Math.max(0, Math.round(((origSize - blob.size) / origSize) * 100));
+      const pctSaved = result.reductionPercentage;
+      const tierInfo = TIER_LIMITS[level];
+
       if (pctSaved > 0) {
-        onToast(`Compressed successfully! Reduced by ${pctSaved}% (${formatBytes(origSize)} → ${formatBytes(blob.size)})`);
+        onToast(
+          `Compressed successfully! Reduced by ${pctSaved}% (${formatBytes(result.originalSize)} → ${formatBytes(result.compressedSize)})`
+        );
       } else {
-        onToast(`PDF optimized and cleaned! (${formatBytes(blob.size)})`);
+        onToast(`PDF optimized and cleaned! (${formatBytes(result.compressedSize)})`);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to compress PDF';
@@ -295,113 +212,118 @@ export const CompressPdfTool: React.FC<CompressPdfToolProps> = ({ onBack, onToas
           </div>
         )}
 
-        {/* Compression Level Selector */}
-        <div className="space-y-3">
-          <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-            Compression Level & File Size Reduction Target
-          </label>
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={() => setLevel('low')}
-              disabled={isCompressing}
-              className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition cursor-pointer ${
-                level === 'low'
-                  ? 'border-orange-600 bg-orange-500/10 dark:bg-orange-500/15 text-slate-900 dark:text-white'
-                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-orange-400'
-              }`}
-            >
-              <span className="text-xs font-extrabold">Low</span>
-              <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 mt-1">
-                30 - 50%
-              </span>
-              <span className="text-[10px] text-slate-500 mt-0.5">Vector Sharp</span>
-            </button>
+        {/* Compression Options and Actions (Only visible when file is uploaded) */}
+        {file && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Compression Level Selector */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Compression Level & File Size Reduction Target
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setLevel('low')}
+                  disabled={isCompressing}
+                  className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition cursor-pointer ${
+                    level === 'low'
+                      ? 'border-orange-600 bg-orange-500/10 dark:bg-orange-500/15 text-slate-900 dark:text-white'
+                      : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-orange-400'
+                  }`}
+                >
+                  <span className="text-xs font-extrabold">Low</span>
+                  <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 mt-1">
+                    30 - 50%
+                  </span>
+                  <span className="text-[10px] text-slate-500 mt-0.5">Vector Sharp</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => setLevel('medium')}
-              disabled={isCompressing}
-              className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition cursor-pointer ${
-                level === 'medium'
-                  ? 'border-orange-600 bg-orange-500/10 dark:bg-orange-500/15 text-slate-900 dark:text-white'
-                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-orange-400'
-              }`}
-            >
-              <span className="text-xs font-extrabold">Medium</span>
-              <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 mt-1">
-                50 - 70%
-              </span>
-              <span className="text-[10px] text-slate-500 mt-0.5">Balanced</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => setLevel('medium')}
+                  disabled={isCompressing}
+                  className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition cursor-pointer ${
+                    level === 'medium'
+                      ? 'border-orange-600 bg-orange-500/10 dark:bg-orange-500/15 text-slate-900 dark:text-white'
+                      : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-orange-400'
+                  }`}
+                >
+                  <span className="text-xs font-extrabold">Medium</span>
+                  <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 mt-1">
+                    50 - 70%
+                  </span>
+                  <span className="text-[10px] text-slate-500 mt-0.5">Balanced</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => setLevel('high')}
-              disabled={isCompressing}
-              className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition cursor-pointer ${
-                level === 'high'
-                  ? 'border-orange-600 bg-orange-500/10 dark:bg-orange-500/15 text-slate-900 dark:text-white'
-                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-orange-400'
-              }`}
-            >
-              <span className="text-xs font-extrabold">High</span>
-              <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 mt-1">
-                70 - 90%
-              </span>
-              <span className="text-[10px] text-slate-500 mt-0.5">Ultra Tiny</span>
-            </button>
-          </div>
+                <button
+                  type="button"
+                  onClick={() => setLevel('high')}
+                  disabled={isCompressing}
+                  className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition cursor-pointer ${
+                    level === 'high'
+                      ? 'border-orange-600 bg-orange-500/10 dark:bg-orange-500/15 text-slate-900 dark:text-white'
+                      : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-orange-400'
+                  }`}
+                >
+                  <span className="text-xs font-extrabold">High</span>
+                  <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 mt-1">
+                    70 - 90%
+                  </span>
+                  <span className="text-[10px] text-slate-500 mt-0.5">Ultra Tiny</span>
+                </button>
+              </div>
 
-          <div className="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-            <span>
-              {level === 'low' && 'Maximum document clarity & crisp vector fonts preserved.'}
-              {level === 'medium' && 'Recommended for email sharing, portals, and uploads.'}
-              {level === 'high' && 'Maximum compression ratio for archival and bandwidth savings.'}
-            </span>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        {isCompressing && (
-          <div className="space-y-2 py-1">
-            <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
-              <span className="flex items-center space-x-1.5">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-600" />
-                <span>{progressStatus || 'Compressing...'}</span>
-              </span>
-              <span className="font-mono">{progressPercent}%</span>
+              <div className="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 justify-center">
+                <Sparkles className="w-3.5 h-3.5 text-orange-500" />
+                <span>
+                  {level === 'low' && 'Maximum document clarity & crisp vector fonts preserved.'}
+                  {level === 'medium' && 'Recommended for email sharing, portals, and uploads.'}
+                  {level === 'high' && 'Maximum compression ratio for archival and bandwidth savings.'}
+                </span>
+              </div>
             </div>
-            <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-orange-600 transition-all duration-200"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
-        )}
 
-        {/* Compress Action Button */}
-        {!downloadUrl && (
-          <button
-            id="compress-process-btn"
-            onClick={processCompress}
-            disabled={!file || isCompressing}
-            className="w-full py-3.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-2xl text-sm font-extrabold shadow-lg shadow-orange-500/20 transition flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed"
-          >
-            {isCompressing ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Compressing PDF...</span>
-              </>
-            ) : (
-              <>
-                <FileArchive className="w-4 h-4" />
-                <span>Compress PDF Size</span>
-              </>
+            {/* Progress Bar */}
+            {isCompressing && (
+              <div className="space-y-2 py-1">
+                <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <span className="flex items-center space-x-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-600" />
+                    <span>{progressStatus || 'Compressing...'}</span>
+                  </span>
+                  <span className="font-mono">{progressPercent}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-orange-600 transition-all duration-200"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
             )}
-          </button>
+
+            {/* Compress Action Button */}
+            {!downloadUrl && (
+              <button
+                id="compress-process-btn"
+                onClick={processCompress}
+                disabled={isCompressing}
+                className="w-full py-3.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-2xl text-sm font-extrabold shadow-lg shadow-orange-500/20 transition flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {isCompressing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Compressing PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileArchive className="w-4 h-4" />
+                    <span>Compress PDF Size</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         )}
 
         {/* Compression Result & Download Card */}
