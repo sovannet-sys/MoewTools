@@ -1,4 +1,12 @@
-export type ToolId = 'home' | 'unlockpdf' | 'compresspdf' | 'mergepdf' | 'pdftopng' | 'json' | 'password';
+export type ToolId =
+  | 'home'
+  | 'unlockpdf'
+  | 'compresspdf'
+  | 'mergepdf'
+  | 'pdftopng'
+  | 'imgtopdf'
+  | 'json'
+  | 'password';
 
 export type ToolCategory = 'all' | 'dev' | 'security' | 'pdf';
 
@@ -12,6 +20,8 @@ export interface ToolDefinition {
 }
 
 export type CompressionTier = 'low' | 'medium' | 'high';
+
+export type AppLanguage = 'en' | 'km';
 
 export interface ToastMessage {
   id: number;

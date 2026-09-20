@@ -8,9 +8,12 @@ import { UnlockPdfTool } from './components/UnlockPdfTool';
 import { CompressPdfTool } from './components/CompressPdfTool';
 import { MergePdfTool } from './components/MergePdfTool';
 import { PdfToPngTool } from './components/PdfToPngTool';
+import { ImageToPdfTool } from './components/ImageToPdfTool';
 import { ToastMessage, ToolId } from './types';
+import { useLanguage } from './context/LanguageContext';
 
 export default function App() {
+  const { t } = useLanguage();
   const [currentTool, setCurrentTool] = useState<ToolId>('home');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -78,6 +81,10 @@ export default function App() {
           <PdfToPngTool onBack={handleNavigate} onToast={showToast} />
         )}
 
+        {currentTool === 'imgtopdf' && (
+          <ImageToPdfTool onBack={handleNavigate} onToast={showToast} />
+        )}
+
         {currentTool === 'compresspdf' && (
           <CompressPdfTool onBack={handleNavigate} onToast={showToast} />
         )}
@@ -94,7 +101,7 @@ export default function App() {
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-6 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
         <p>
-          &copy; {new Date().getFullYear()} Moew Tools. All processing executes 100% securely inside your browser.
+          &copy; {new Date().getFullYear()} {t.footer.tagline}
         </p>
       </footer>
 

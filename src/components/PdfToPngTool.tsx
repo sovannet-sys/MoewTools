@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ToolId } from '../types';
 import { formatBytes } from '../utils/formatters';
+import { useLanguage } from '../context/LanguageContext';
 import {
   convertPdfToPng,
   createPngZipArchive,
@@ -30,6 +31,9 @@ interface PdfToPngToolProps {
 }
 
 export const PdfToPngTool: React.FC<PdfToPngToolProps> = ({ onBack, onToast }) => {
+  const { language } = useLanguage();
+  const isKhmer = language === 'km';
+
   const [file, setFile] = useState<File | null>(null);
   const [scale, setScale] = useState<PngDpiScale>(2);
   const [pageRangeMode, setPageRangeMode] = useState<'all' | 'custom'>('all');
@@ -178,7 +182,7 @@ export const PdfToPngTool: React.FC<PdfToPngToolProps> = ({ onBack, onToast }) =
         className="inline-flex items-center space-x-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Back to All Tools</span>
+        <span>{isKhmer ? 'ត្រឡប់ទៅឧបករណ៍ទាំងអស់' : 'Back to All Tools'}</span>
       </button>
 
       {/* Header Card */}
@@ -190,10 +194,12 @@ export const PdfToPngTool: React.FC<PdfToPngToolProps> = ({ onBack, onToast }) =
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                PDF to PNG Converter
+                {isKhmer ? 'បំប្លែង PDF ទៅជារូបថត (PDF to Photo)' : 'PDF to Photo'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Render every page of your PDF into crisp, high-resolution PNG images with zero quality loss
+                {isKhmer
+                  ? 'បំប្លែងគ្រប់ទំព័រនៃឯកសារ PDF របស់អ្នកទៅជារូបថត និងរូបភាព PNG កម្រិតច្បាស់ខ្ពស់ដោយមិនបាត់បង់គុណភាព'
+                  : 'Render every page of your PDF into crisp, high-resolution photo and PNG images with zero quality loss'}
               </p>
             </div>
           </div>

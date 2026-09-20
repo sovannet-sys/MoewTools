@@ -4,6 +4,7 @@ import {
   FileArchive,
   FileImage,
   Files,
+  Image as ImageIcon,
   KeyRound,
   Search,
   Unlock,
@@ -12,69 +13,82 @@ import {
   Zap,
 } from 'lucide-react';
 import { ToolCategory, ToolDefinition, ToolId } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface HomeViewProps {
   onSelectTool: (id: ToolId) => void;
 }
 
-const ALL_TOOLS: ToolDefinition[] = [
+const TOOL_BASE_CONFIG: Array<{
+  id: ToolId;
+  category: 'dev' | 'security' | 'pdf';
+  tags: string[];
+}> = [
   {
     id: 'pdftopng',
-    name: 'PDF to PNG Converter',
-    shortDesc: 'Convert PDF pages into crisp, high-resolution PNG images with customizable DPI scale and ZIP batch download.',
     category: 'pdf',
-    categoryLabel: 'PDF Utility',
-    tags: ['pdf', 'png', 'image', 'convert', 'extract', 'render', 'high res', 'dpi', 'zip'],
+    tags: ['pdf', 'photo', 'photos', 'png', 'image', 'convert', 'extract', 'render', 'high res', 'dpi', 'zip'],
+  },
+  {
+    id: 'imgtopdf',
+    category: 'pdf',
+    tags: ['picture', 'image', 'photo', 'pdf', 'convert', 'jpg', 'png', 'webp', 'album', 'images to pdf'],
   },
   {
     id: 'unlockpdf',
-    name: 'Unlock PDF',
-    shortDesc: 'Remove passwords and restrictions automatically with 100% original vector and text quality.',
     category: 'pdf',
-    categoryLabel: 'PDF Utility',
     tags: ['unlock', 'pdf', 'password', 'decrypt', 'remove', 'unknown', 'bypass', 'security'],
   },
   {
     id: 'mergepdf',
-    name: 'Merge PDF Files',
-    shortDesc: 'Combine multiple PDF documents into a single file in any custom order with 100% original quality.',
     category: 'pdf',
-    categoryLabel: 'PDF Utility',
     tags: ['merge', 'pdf', 'combine', 'join', 'reorder', 'pages', 'documents', 'unite'],
   },
   {
     id: 'compresspdf',
-    name: 'Compress PDF File Size',
-    shortDesc: 'Shrink files with Low (30-50%), Medium (50-70%), and High (70-90%) reduction tiers while keeping maximum quality.',
     category: 'pdf',
-    categoryLabel: 'PDF Utility',
     tags: ['compress', 'pdf', 'file size', 'reduce', 'optimize', 'shrink', 'mb', 'kb', 'massive'],
   },
   {
     id: 'json',
-    name: 'JSON Formatter & Validator',
-    shortDesc: 'Validate, format, minify, and inspect complex JSON objects with syntax error location.',
     category: 'dev',
-    categoryLabel: 'Developer',
     tags: ['json', 'formatter', 'validator', 'minify', 'pretty print', 'developer', 'parse'],
   },
   {
     id: 'password',
-    name: 'Secure Password Generator',
-    shortDesc: 'Generate cryptographic high-entropy passwords with customizable symbols, numbers, and length.',
     category: 'security',
-    categoryLabel: 'Security',
     tags: ['password', 'generator', 'security', 'random', 'crypto', 'entropy', 'pin'],
   },
 ];
 
 export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
+  const { t, language } = useLanguage();
+  const isKhmer = language === 'km';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ToolCategory>('all');
 
+  const tools: ToolDefinition[] = useMemo(() => {
+    return TOOL_BASE_CONFIG.map((item) => {
+      const toolTranslation = t.tools[item.id] || {
+        name: item.id,
+        shortDesc: '',
+        categoryLabel: item.category.toUpperCase(),
+      };
+      return {
+        id: item.id,
+        name: toolTranslation.name,
+        shortDesc: toolTranslation.shortDesc,
+        category: item.category,
+        categoryLabel: toolTranslation.categoryLabel,
+        tags: item.tags,
+      };
+    });
+  }, [t]);
+
   const filteredTools = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return ALL_TOOLS.filter((tool) => {
+    return tools.filter((tool) => {
       const matchesCategory =
         selectedCategory === 'all' || tool.category === selectedCategory;
       if (!matchesCategory) return false;
@@ -85,12 +99,14 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
       const inTags = tool.tags.some((tag) => tag.toLowerCase().includes(q));
       return inName || inDesc || inTags;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, tools]);
 
   const getToolIcon = (id: ToolId) => {
     switch (id) {
       case 'pdftopng':
         return <FileImage className="w-4 h-4 text-teal-600 dark:text-teal-400" />;
+      case 'imgtopdf':
+        return <ImageIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />;
       case 'unlockpdf':
         return <Unlock className="w-4 h-4 text-rose-600 dark:text-rose-400" />;
       case 'mergepdf':
@@ -123,6 +139,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
     switch (id) {
       case 'pdftopng':
         return 'bg-teal-500/10 dark:bg-teal-500/15 group-hover:bg-teal-500/20';
+      case 'imgtopdf':
+        return 'bg-cyan-500/10 dark:bg-cyan-500/15 group-hover:bg-cyan-500/20';
       case 'unlockpdf':
         return 'bg-rose-500/10 dark:bg-rose-500/15 group-hover:bg-rose-500/20';
       case 'mergepdf':
@@ -144,13 +162,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
       <div className="text-center max-w-2xl mx-auto space-y-4 pt-2">
         <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/70 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">
           <Zap className="w-3.5 h-3.5" />
-          <span>100% Client-Side Privacy & Instant Processing</span>
+          <span>{t.home.privacyBadge}</span>
         </div>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
-          Supercharge Your Workflow with Moew Tools
+          {t.home.heroTitle}
         </h2>
         <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-          Lightning-fast developer utilities, cryptographic password generation, and high-capacity browser PDF processing supporting massive files. Free forever.
+          {t.home.heroSubtitle}
         </p>
 
         {/* Search */}
@@ -161,7 +179,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search tools (e.g. JSON, Password, PDF, Unlock, Compress...)"
+            placeholder={t.home.searchPlaceholder}
             className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-2xl text-sm font-medium shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-600 dark:focus:ring-indigo-500 transition-all"
           />
         </div>
@@ -177,7 +195,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60'
             }`}
           >
-            All Tools
+            {t.home.categoryAll}
           </button>
           <button
             id="cat-pdf-btn"
@@ -188,7 +206,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60'
             }`}
           >
-            PDF Utilities
+            {t.home.categoryPdf}
           </button>
           <button
             id="cat-dev-btn"
@@ -199,7 +217,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60'
             }`}
           >
-            Developer
+            {t.home.categoryDev}
           </button>
           <button
             id="cat-security-btn"
@@ -210,7 +228,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60'
             }`}
           >
-            Security
+            {t.home.categorySecurity}
           </button>
         </div>
       </div>
@@ -264,10 +282,10 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
             <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
               <span className="flex items-center space-x-1.5">
                 <Shield className="w-3.5 h-3.5 text-slate-400" />
-                <span>Zero Server Uploads</span>
+                <span>{isKhmer ? 'គ្មានការបង្ហោះទៅ Server' : 'Zero Server Uploads'}</span>
               </span>
               <span className="text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline">
-                Open Tool
+                {isKhmer ? 'បើកឧបករណ៍' : 'Open Tool'}
               </span>
             </div>
           </div>
@@ -277,22 +295,23 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectTool }) => {
       {filteredTools.length === 0 && (
         <div className="text-center py-12 space-y-2">
           <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-            No tools matched your search
+            {t.home.noToolsTitle}
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Try searching for &quot;PDF&quot;, &quot;Password&quot;, or &quot;JSON&quot;.
+            {t.home.noToolsDesc}
           </p>
           <button
             onClick={() => {
               setSearchQuery('');
               setSelectedCategory('all');
             }}
-            className="mt-2 px-3.5 py-1.5 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+            className="mt-2 px-3.5 py-1.5 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition cursor-pointer"
           >
-            Reset Filters
+            {t.home.clearFilter}
           </button>
         </div>
       )}
     </div>
   );
 };
+
